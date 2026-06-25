@@ -54,6 +54,6 @@ const make = (definitions: ReadonlyArray<Definition>) => {
 
 export const makeEventGroup = (definitions: ReadonlyArray<Definition>) => make(definitions).group
 
-const event = make(EventManifest.ServerDefinitions)
+const event = make(EventManifest.CurrentServerDefinitions)
 export const EventGroup = event.group
 export type Event = typeof event.schema.Type

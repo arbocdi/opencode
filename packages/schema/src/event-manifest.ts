@@ -34,13 +34,21 @@ import { WorktreeEvent } from "./worktree-event"
 const sessionV1DurableDefinitions = SessionV1.Event.Definitions.filter((definition) => definition.durable !== undefined)
 const sessionV1LiveDefinitions = SessionV1.Event.Definitions.filter((definition) => definition.durable === undefined)
 
-const coreDefinitions = Event.inventory(...sessionV1DurableDefinitions, ...SessionEvent.Definitions)
+const currentCoreDefinitions = Event.inventory(...SessionEvent.Definitions)
+const compatibilityCoreDefinitions = Event.inventory(...sessionV1DurableDefinitions, ...currentCoreDefinitions)
 
-const foundationDefinitions = Event.inventory(
+const currentFoundationDefinitions = Event.inventory(
   ...ModelsDev.Event.Definitions,
   ...Integration.Event.Definitions,
   ...Catalog.Event.Definitions,
-  ...coreDefinitions,
+  ...currentCoreDefinitions,
+)
+
+const compatibilityFoundationDefinitions = Event.inventory(
+  ...ModelsDev.Event.Definitions,
+  ...Integration.Event.Definitions,
+  ...Catalog.Event.Definitions,
+  ...compatibilityCoreDefinitions,
 )
 
 const featureDefinitions = Event.inventory(
@@ -54,14 +62,20 @@ const featureDefinitions = Event.inventory(
   ...Question.Event.Definitions,
 )
 
+export const CurrentServerDefinitions = Event.inventory(
+  ...currentFoundationDefinitions,
+  ...featureDefinitions,
+  ...SessionTodo.Event.Definitions,
+)
+
 export const ServerDefinitions = Event.inventory(
-  ...foundationDefinitions,
+  ...compatibilityFoundationDefinitions,
   ...featureDefinitions,
   ...SessionTodo.Event.Definitions,
 )
 
 export const Definitions = Event.inventory(
-  ...foundationDefinitions,
+  ...compatibilityFoundationDefinitions,
   ...sessionV1LiveDefinitions,
   ...InstallationEvent.Definitions,
   ...featureDefinitions,
