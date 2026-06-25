@@ -54,19 +54,16 @@ const featureDefinitions = Event.inventory(
   ...Question.Event.Definitions,
 )
 
-export const CurrentServerDefinitions = Event.inventory(
-  ...foundationDefinitions,
-  ...currentCoreDefinitions,
-  ...featureDefinitions,
-  ...SessionTodo.Event.Definitions,
-)
+const serverDefinitions = (coreDefinitions: ReadonlyArray<Event.Definition>) =>
+  Event.inventory(
+    ...foundationDefinitions,
+    ...coreDefinitions,
+    ...featureDefinitions,
+    ...SessionTodo.Event.Definitions,
+  )
 
-export const ServerDefinitions = Event.inventory(
-  ...foundationDefinitions,
-  ...compatibilityCoreDefinitions,
-  ...featureDefinitions,
-  ...SessionTodo.Event.Definitions,
-)
+export const CurrentServerDefinitions = serverDefinitions(currentCoreDefinitions)
+export const ServerDefinitions = serverDefinitions(compatibilityCoreDefinitions)
 
 export const Definitions = Event.inventory(
   ...foundationDefinitions,
