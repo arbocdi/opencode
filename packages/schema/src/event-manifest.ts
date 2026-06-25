@@ -37,18 +37,10 @@ const sessionV1LiveDefinitions = SessionV1.Event.Definitions.filter((definition)
 const currentCoreDefinitions = Event.inventory(...SessionEvent.Definitions)
 const compatibilityCoreDefinitions = Event.inventory(...sessionV1DurableDefinitions, ...currentCoreDefinitions)
 
-const currentFoundationDefinitions = Event.inventory(
+const foundationDefinitions = Event.inventory(
   ...ModelsDev.Event.Definitions,
   ...Integration.Event.Definitions,
   ...Catalog.Event.Definitions,
-  ...currentCoreDefinitions,
-)
-
-const compatibilityFoundationDefinitions = Event.inventory(
-  ...ModelsDev.Event.Definitions,
-  ...Integration.Event.Definitions,
-  ...Catalog.Event.Definitions,
-  ...compatibilityCoreDefinitions,
 )
 
 const featureDefinitions = Event.inventory(
@@ -63,19 +55,22 @@ const featureDefinitions = Event.inventory(
 )
 
 export const CurrentServerDefinitions = Event.inventory(
-  ...currentFoundationDefinitions,
+  ...foundationDefinitions,
+  ...currentCoreDefinitions,
   ...featureDefinitions,
   ...SessionTodo.Event.Definitions,
 )
 
 export const ServerDefinitions = Event.inventory(
-  ...compatibilityFoundationDefinitions,
+  ...foundationDefinitions,
+  ...compatibilityCoreDefinitions,
   ...featureDefinitions,
   ...SessionTodo.Event.Definitions,
 )
 
 export const Definitions = Event.inventory(
-  ...compatibilityFoundationDefinitions,
+  ...foundationDefinitions,
+  ...compatibilityCoreDefinitions,
   ...sessionV1LiveDefinitions,
   ...InstallationEvent.Definitions,
   ...featureDefinitions,

@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test"
 import { EventManifest } from "@opencode-ai/schema/event-manifest"
 import { SessionV1 } from "@opencode-ai/schema/session-v1"
+import { HttpApi, OpenApi } from "effect/unstable/httpapi"
+import { EventGroup } from "../src/groups/event"
+
+const currentOpenApi = OpenApi.fromApi(HttpApi.make("test").add(EventGroup))
+const currentEventOpenApi = JSON.stringify(currentOpenApi.components.schemas?.V2Event)
 
 test("current Protocol events exclude V1-only session events", () => {
   const current = new Set<string>(EventManifest.CurrentServerDefinitions.map((definition) => definition.type))
@@ -22,6 +27,9 @@ test("current Protocol events exclude V1-only session events", () => {
   expect(current.has("permission.v2.asked")).toBe(true)
   expect(current.has("question.v2.asked")).toBe(true)
   expect(current.has("command.executed")).toBe(false)
+  expect(currentEventOpenApi).toContain("session.next.prompted")
+  expect(currentEventOpenApi).not.toContain("message.updated")
+  expect(currentEventOpenApi).not.toContain("message.part.updated")
 })
 
 test("compatibility server inventory retains V1 events", () => {
