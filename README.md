@@ -1,3 +1,4 @@
+# This is a fork of opencode project, mainly for my personal use.
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
