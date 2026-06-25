@@ -82,6 +82,7 @@ import { getRevertDiffFiles } from "../../util/revert-diff"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
 import { LocationProvider } from "../../context/location"
+import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 
 addDefaultParsers(parsers.parsers)
 
@@ -91,6 +92,7 @@ const GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_
 const GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
 const GO_UPSELL_PROVIDERS = new Set(["opencode", "opencode-go"])
+const SESSION_RENDER_STATE_CHANNELS = new Set(["local", "dev", "beta"])
 
 export const alwaysSeparate = new WeakSet<BoxRenderable>()
 
@@ -418,6 +420,56 @@ export function Session() {
       if (!scroll || scroll.isDestroyed) return
       scroll.scrollTo(scroll.scrollHeight)
     }, 50)
+  }
+
+  async function dumpRenderState() {
+    const timestamp = Date.now()
+    const maxTop = Math.max(0, scroll.scrollHeight - scroll.viewport.height)
+    const filename = `session-${route.sessionID.slice(0, 8)}-render-state-${timestamp}.json`
+    renderer.dumpBuffers(timestamp)
+    await writeExport(
+      path.join(process.cwd(), filename),
+      JSON.stringify(
+        {
+          capturedAt: timestamp,
+          channel: InstallationChannel,
+          version: InstallationVersion,
+          sessionID: route.sessionID,
+          scroll: {
+            top: scroll.scrollTop,
+            height: scroll.scrollHeight,
+            viewportHeight: scroll.viewport.height,
+            maxTop,
+            atBottom: scroll.scrollTop >= maxTop,
+          },
+          messages: messages().map((message) => ({
+            id: message.id,
+            role: message.role,
+            parts: (sync.data.part[message.id] ?? []).map((part) => {
+              const renderable = scroll.findDescendantById(`text-${part.id}`)
+              return {
+                id: part.id,
+                type: part.type,
+                ...((part.type === "text" || part.type === "reasoning") && { textLength: part.text.length }),
+                ...(renderable && {
+                  renderable: {
+                    id: renderable.id,
+                    x: renderable.x,
+                    y: renderable.y,
+                    width: renderable.width,
+                    height: renderable.height,
+                    visible: renderable.visible,
+                  },
+                }),
+              }
+            }),
+          })),
+        },
+        null,
+        2,
+      ),
+    )
+    toast.show({ message: `Session render state written to ${filename}`, variant: "success" })
   }
 
   const local = useLocal()
@@ -1015,6 +1067,23 @@ export function Session() {
         dialog.clear()
       },
     },
+    ...(SESSION_RENDER_STATE_CHANNELS.has(InstallationChannel)
+      ? [
+          {
+            title: "Dump session render state",
+            value: "session.debug.dump_render_state",
+            category: "Debug",
+            run: async () => {
+              try {
+                await dumpRenderState()
+              } catch {
+                toast.show({ message: "Failed to dump session render state", variant: "error" })
+              }
+              dialog.clear()
+            },
+          },
+        ]
+      : []),
     {
       title: "Background subagents",
       value: "session.background",
