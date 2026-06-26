@@ -1,4 +1,6 @@
 import { Config } from "@/config/config"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { ProviderContextLimit } from "@/provider/context-limit"
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
 import { Effect } from "effect"
@@ -10,6 +12,7 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
   Effect.gen(function* () {
     const providerSvc = yield* Provider.Service
     const configSvc = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
 
     const get = Effect.fn("ConfigHttpApi.get")(function* () {
       return yield* configSvc.get()
@@ -22,9 +25,16 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
     })
 
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
+      const config = yield* configSvc.get()
       const providers = yield* providerSvc.list()
       return {
-        providers: Object.values(providers).map(Provider.toPublicInfo),
+        providers: Object.values(providers).map((item) =>
+          ProviderContextLimit.withUsable({
+            cfg: config,
+            provider: Provider.toPublicInfo(item),
+            outputTokenMax: flags.outputTokenMax,
+          }),
+        ),
         default: Provider.defaultModelIDs(providers),
       }
     })

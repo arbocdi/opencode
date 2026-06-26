@@ -372,6 +372,7 @@ export const dict = {
   "context.stats.provider": "Провайдер",
   "context.stats.model": "Модель",
   "context.stats.limit": "Лимит контекста",
+  "context.stats.usableLimit": "Доступно до сжатия",
   "context.stats.totalTokens": "Всего токенов",
   "context.stats.usage": "Использование",
   "context.stats.inputTokens": "Входные токены",

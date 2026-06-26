@@ -10,6 +10,7 @@ type Model = {
   name?: string
   limit: {
     context: number
+    usable?: number
   }
 }
 
@@ -20,6 +21,8 @@ type Context = {
   providerLabel: string
   modelLabel: string
   limit: number | undefined
+  usableLimit: number | undefined
+  usageLimit: number | undefined
   input: number
   output: number
   reasoning: number
@@ -55,6 +58,8 @@ const build = (messages: Message[] = [], providers: Provider[] = []): Metrics =>
   const provider = providers.find((item) => item.id === message.providerID)
   const model = provider?.models[message.modelID]
   const limit = model?.limit.context
+  const usableLimit = model?.limit.usable
+  const usageLimit = usableLimit ?? limit
   const total = tokenTotal(message)
 
   return {
@@ -66,13 +71,15 @@ const build = (messages: Message[] = [], providers: Provider[] = []): Metrics =>
       providerLabel: provider?.name ?? message.providerID,
       modelLabel: model?.name ?? message.modelID,
       limit,
+      usableLimit,
+      usageLimit,
       input: message.tokens.input,
       output: message.tokens.output,
       reasoning: message.tokens.reasoning,
       cacheRead: message.tokens.cache.read,
       cacheWrite: message.tokens.cache.write,
       total,
-      usage: limit ? Math.round((total / limit) * 100) : null,
+      usage: usageLimit ? Math.round((total / usageLimit) * 100) : null,
     },
   }
 }

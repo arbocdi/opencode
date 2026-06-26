@@ -2138,6 +2138,7 @@ export type Model = {
     context: number
     input?: number
     output: number
+    usable?: number
   }
   status: "alpha" | "beta" | "deprecated" | "active"
   options: {

@@ -67,6 +67,32 @@ describe("getSessionContextMetrics", () => {
     expect(metrics.context?.modelLabel).toBe("GPT-4.1")
   })
 
+  test("uses usable limit for usage when available", () => {
+    const messages = [
+      assistant("a1", { input: 95_000, output: 2_000, reasoning: 0, read: 424, write: 0 }, 0.5, "openai", "gpt-5.5"),
+    ]
+    const providers = [
+      {
+        id: "openai",
+        name: "OpenAI",
+        models: {
+          "gpt-5.5": {
+            name: "GPT-5.5",
+            limit: { context: 400_000, usable: 252_000 },
+          },
+        },
+      },
+    ]
+
+    const metrics = getSessionContextMetrics(messages, providers)
+
+    expect(metrics.context?.limit).toBe(400_000)
+    expect(metrics.context?.usableLimit).toBe(252_000)
+    expect(metrics.context?.usageLimit).toBe(252_000)
+    expect(metrics.context?.total).toBe(97_424)
+    expect(metrics.context?.usage).toBe(39)
+  })
+
   test("preserves fallback labels and null usage when model metadata is missing", () => {
     const messages = [assistant("a1", { input: 40, output: 10, reasoning: 0, read: 0, write: 0 }, 0.1, "p-1", "m-1")]
     const providers = [{ id: "p-1", models: {} }]

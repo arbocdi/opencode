@@ -2,6 +2,8 @@ import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
+import { ProviderContextLimit } from "@/provider/context-limit"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 import { mapValues } from "remeda"
 import { Effect, Schema } from "effect"
@@ -36,6 +38,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     const cfg = yield* Config.Service
     const provider = yield* Provider.Service
     const svc = yield* ProviderAuth.Service
+    const flags = yield* RuntimeFlags.Service
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
@@ -52,7 +55,13 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         connected,
       )
       return {
-        all: Object.values(providers).map(Provider.toPublicInfo),
+        all: Object.values(providers).map((item) =>
+          ProviderContextLimit.withUsable({
+            cfg: config,
+            provider: Provider.toPublicInfo(item),
+            outputTokenMax: flags.outputTokenMax,
+          }),
+        ),
         default: Provider.defaultModelIDs(providers),
         connected: Object.keys(connected),
       }

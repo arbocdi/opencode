@@ -69,6 +69,14 @@ function hasProviderMutationMarker(input: unknown, key: "all" | "providers", id:
   return isRecord(provider.options) && provider.options.mutatedByPlugin === true
 }
 
+function modelLimit(input: unknown, key: "all" | "providers", providerID: string, modelID: string) {
+  const provider = providerByID(input, key, providerID)
+  if (!isRecord(provider) || !isRecord(provider.models)) return undefined
+  const model = provider.models[modelID]
+  if (!isRecord(model) || !isRecord(model.limit)) return undefined
+  return model.limit
+}
+
 function requestAuthorize(input: {
   providerID: string
   method: number
@@ -276,6 +284,54 @@ describe("provider HttpApi", () => {
       })
     }),
     projectOptions,
+  )
+
+  it.instance(
+    "serves computed usable context limits",
+    Effect.gen(function* () {
+      const directory = (yield* TestInstance).directory
+      const headers = { "x-opencode-directory": directory }
+      const providerResponse = yield* request("/provider", { headers })
+      const configResponse = yield* request("/config/providers", { headers })
+
+      expect(providerResponse.status).toBe(200)
+      expect(configResponse.status).toBe(200)
+
+      const providerBody = yield* providerResponse.json
+      const configBody = yield* configResponse.json
+      expect(modelLimit(providerBody, "all", "custom-provider", "gpt-5.5")).toMatchObject({
+        context: 400_000,
+        input: 272_000,
+        output: 128_000,
+        usable: 260_000,
+      })
+      expect(modelLimit(configBody, "providers", "custom-provider", "gpt-5.5")).toMatchObject({
+        context: 400_000,
+        input: 272_000,
+        output: 128_000,
+        usable: 260_000,
+      })
+    }),
+    {
+      config: {
+        ...projectOptions.config,
+        compaction: { reserved: 12_000 },
+        provider: {
+          "custom-provider": {
+            name: "Custom Provider",
+            npm: "@ai-sdk/openai-compatible",
+            api: "https://api.custom.com/v1",
+            models: {
+              "gpt-5.5": {
+                name: "GPT-5.5",
+                limit: { context: 400_000, input: 272_000, output: 128_000 },
+              },
+            },
+            options: { apiKey: "custom-key" },
+          },
+        },
+      },
+    },
   )
 
   it.instance(

@@ -1013,6 +1013,7 @@ const ProviderLimit = Schema.Struct({
   context: Schema.Finite,
   input: optionalOmitUndefined(Schema.Finite),
   output: Schema.Finite,
+  usable: optionalOmitUndefined(Schema.Finite),
 })
 
 export const Model = Schema.Struct({
