@@ -991,10 +991,10 @@ export function MessageTimeline(props: {
         data-timeline-row={input.row()._tag}
         classList={{
           "min-w-0 w-full max-w-full": true,
-          "md:max-w-200 2xl:max-w-[1000px]": props.centered,
           "md:mx-auto": props.centered,
           "pt-3": previousAssistantPart(),
         }}
+        style={{ "max-width": props.centered ? `${settings.appearance.sessionContentWidth()}px` : undefined }}
       >
         <div data-component="session-turn" class="min-w-0 w-full relative" style={{ height: "auto" }}>
           {input.children}
@@ -1294,8 +1294,9 @@ export function MessageTimeline(props: {
               "pr-3": true,
               "pl-4": settings.general.newLayoutDesigns(),
               "pl-2 md:pl-4": !settings.general.newLayoutDesigns(),
-              "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered,
+              "md:mx-auto": props.centered,
             }}
+            style={{ "max-width": props.centered ? `${settings.appearance.sessionContentWidth()}px` : undefined }}
           >
             <div class="h-12 w-full flex items-center justify-between gap-2">
               <div class="flex items-center gap-1 min-w-0 flex-1 pr-3">

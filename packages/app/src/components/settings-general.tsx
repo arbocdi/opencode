@@ -21,6 +21,7 @@ import {
   sansDefault,
   sansFontFamily,
   sansInput,
+  sessionContentWidthOptions,
   terminalDefault,
   terminalFontFamily,
   terminalInput,
@@ -214,6 +215,9 @@ export const SettingsGeneral: Component = () => {
 
   const noneSound = { id: "none", label: "sound.option.none" } as const
   const soundOptions = [noneSound, ...SOUND_OPTIONS]
+  const contentWidthOptions = createMemo(() =>
+    sessionContentWidthOptions.map((value) => ({ value, label: `${value}px` })),
+  )
   const mono = () => monoInput(settings.appearance.font())
   const sans = () => sansInput(settings.appearance.uiFont())
   const terminal = () => terminalInput(settings.appearance.terminalFont())
@@ -479,6 +483,24 @@ export const SettingsGeneral: Component = () => {
             variant="secondary"
             size="small"
             triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.general.row.sessionContentWidth.title")}
+          description={language.t("settings.general.row.sessionContentWidth.description")}
+        >
+          <Select
+            data-action="settings-session-content-width"
+            options={contentWidthOptions()}
+            current={contentWidthOptions().find((o) => o.value === settings.appearance.sessionContentWidth())}
+            value={(o) => o.value.toString()}
+            label={(o) => o.label}
+            onSelect={(option) => option && settings.appearance.setSessionContentWidth(option.value)}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+            triggerStyle={{ "min-width": "220px" }}
           />
         </SettingsRow>
 

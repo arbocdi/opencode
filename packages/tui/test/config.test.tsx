@@ -29,14 +29,16 @@ test("validates config constraints", () => {
       leader_timeout: 250,
       attention: { volume: 1, sounds: { done: "done.wav" } },
       prompt: { max_height: 10, max_width: "auto" },
+      session: { max_width: 120 },
       scroll_speed: 0.001,
       diff_style: "stacked",
       plugin: ["example-plugin"],
     }),
-  ).toMatchObject({ leader_timeout: 250, attention: { volume: 1 }, diff_style: "stacked" })
+  ).toMatchObject({ leader_timeout: 250, attention: { volume: 1 }, session: { max_width: 120 }, diff_style: "stacked" })
   expect(() => decodeInfo({ leader_timeout: 0 })).toThrow()
   expect(() => decodeInfo({ attention: { volume: 1.1 } })).toThrow()
   expect(() => decodeInfo({ prompt: { max_width: 0 } })).toThrow()
+  expect(() => decodeInfo({ session: { max_width: 0 } })).toThrow()
   expect(() => decodeInfo({ scroll_speed: 0 })).toThrow()
   expect(decodeInfo({ attention: { sounds: { unknown: "sound.wav" } } })).toEqual({ attention: { sounds: {} } })
 })

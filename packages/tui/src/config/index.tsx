@@ -49,6 +49,9 @@ export const Prompt = Schema.Struct({
     description: "Home prompt max width: a positive integer for a fixed cap, or 'auto' to scale with terminal width",
   }),
 }).annotate({ description: "Prompt size settings" })
+export const Session = Schema.Struct({
+  max_width: Schema.optional(PromptSize).annotate({ description: "Session message and prompt max width" }),
+}).annotate({ description: "Session screen layout settings" })
 
 export const Info = Schema.Struct({
   $schema: Schema.optional(Schema.String),
@@ -59,6 +62,7 @@ export const Info = Schema.Struct({
   leader_timeout: Schema.optional(LeaderTimeout),
   attention: Schema.optional(Attention),
   prompt: Schema.optional(Prompt),
+  session: Schema.optional(Session),
   scroll_speed: Schema.optional(ScrollSpeed).annotate({ description: "TUI scroll speed" }),
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),

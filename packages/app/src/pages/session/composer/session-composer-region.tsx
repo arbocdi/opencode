@@ -4,6 +4,7 @@ import { useSpring } from "@opencode-ai/ui/motion-spring"
 import { PromptInput, type PromptInputControls, type PromptInputProps } from "@/components/prompt-input"
 import { useLanguage } from "@/context/language"
 import { usePrompt } from "@/context/prompt"
+import { useSettings } from "@/context/settings"
 import { useSync } from "@/context/sync"
 import { getSessionHandoff, setSessionHandoff } from "@/pages/session/handoff"
 import { SessionPermissionDock } from "@/pages/session/composer/session-permission-dock"
@@ -52,6 +53,7 @@ export function SessionComposerRegion(props: {
 }) {
   const prompt = props.promptInput.state ?? usePrompt()
   const language = useLanguage()
+  const settings = useSettings()
   const sync = useSync()
 
   const handoffPrompt = createMemo(() => getSessionHandoff(props.sessionKey)?.prompt)
@@ -160,7 +162,13 @@ export function SessionComposerRegion(props: {
           "w-full pointer-events-auto": true,
           "px-3": props.placement !== "inline",
           [NEW_SESSION_CONTENT_WIDTH]: props.placement === "inline",
-          "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered,
+          "md:mx-auto": props.centered,
+        }}
+        style={{
+          "max-width":
+            props.placement === "inline" || props.centered
+              ? `${settings.appearance.sessionContentWidth()}px`
+              : undefined,
         }}
       >
         <Show when={props.state.questionRequest()} keyed>

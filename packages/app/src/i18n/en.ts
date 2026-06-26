@@ -828,6 +828,8 @@ export const dict = {
   "settings.general.row.terminalFont.description": "Customise the font used in the terminal",
   "settings.general.row.uiFont.title": "UI Font",
   "settings.general.row.uiFont.description": "Customise the font used throughout the interface",
+  "settings.general.row.sessionContentWidth.title": "Session content width",
+  "settings.general.row.sessionContentWidth.description": "Set the maximum width of the session timeline and prompt",
   "settings.general.row.followup.title": "Follow-up behavior",
   "settings.general.row.followup.description": "Choose whether follow-up prompts steer immediately or wait in a queue",
   "settings.general.row.followup.option.queue": "Queue",

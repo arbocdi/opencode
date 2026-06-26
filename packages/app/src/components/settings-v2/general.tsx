@@ -20,6 +20,7 @@ import {
   sansDefault,
   sansFontFamily,
   sansInput,
+  sessionContentWidthOptions,
   terminalDefault,
   terminalFontFamily,
   terminalInput,
@@ -201,6 +202,9 @@ export const SettingsGeneralV2: Component = () => {
 
   const noneSound = { id: "none", label: "sound.option.none" } as const
   const soundOptions = [noneSound, ...SOUND_OPTIONS]
+  const contentWidthOptions = createMemo(() =>
+    sessionContentWidthOptions.map((value) => ({ value, label: `${value}px` })),
+  )
   const mono = () => monoInput(settings.appearance.font())
   const sans = () => sansInput(settings.appearance.uiFont())
   const terminal = () => terminalInput(settings.appearance.terminalFont())
@@ -465,6 +469,23 @@ export const SettingsGeneralV2: Component = () => {
               theme.previewTheme(option.id)
               return () => theme.cancelPreview()
             }}
+          />
+        </SettingsRowV2>
+
+        <SettingsRowV2
+          title={language.t("settings.general.row.sessionContentWidth.title")}
+          description={language.t("settings.general.row.sessionContentWidth.description")}
+        >
+          <SelectV2
+            appearance="inline"
+            data-action="settings-session-content-width"
+            options={contentWidthOptions()}
+            current={contentWidthOptions().find((o) => o.value === settings.appearance.sessionContentWidth())}
+            placement="bottom-end"
+            gutter={6}
+            value={(o) => o.value.toString()}
+            label={(o) => o.label}
+            onSelect={(option) => option && settings.appearance.setSessionContentWidth(option.value)}
           />
         </SettingsRowV2>
 

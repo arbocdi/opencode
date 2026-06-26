@@ -1,3 +1,12 @@
+Прочитай AGENTS.md в каталоге-родителе.
+
+## Project Tasks
+
+- В этом проекте задачи документируем в `tasks/<short-task-name>/`, а не в `local/tasks/`.
+- Папка `tasks/` должна попадать в git, чтобы история задач сохранялась вместе с репозиторием.
+- Для каждой нетривиальной задачи создавай минимум `task.md` и `plan.md`.
+- `task.md` описывает, что делаем и зачем; `plan.md` описывает технический план, измененные файлы, проверки и важные решения.
+
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - The default branch in this repo is `dev`.
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.

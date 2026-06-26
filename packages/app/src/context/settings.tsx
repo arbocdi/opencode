@@ -37,6 +37,7 @@ export interface Settings {
   }
   appearance: {
     fontSize: number
+    sessionContentWidth: number
     mono: string
     sans: string
     terminal: string
@@ -53,6 +54,8 @@ export const monoDefault = "System Mono"
 export const sansDefault = "System Sans"
 export const terminalDefault = "JetBrainsMono Nerd Font Mono"
 export const newLayoutDesignsDefault = import.meta.env.VITE_OPENCODE_CHANNEL !== "prod"
+export const sessionContentWidthOptions = [1000, 1100, 1280, 1440, 1600] as const
+export const sessionContentWidthDefault = 1280
 
 const monoFallback =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
@@ -121,6 +124,7 @@ const defaultSettings: Settings = {
   },
   appearance: {
     fontSize: 14,
+    sessionContentWidth: sessionContentWidthDefault,
     mono: "",
     sans: "",
     terminal: "",
@@ -146,6 +150,11 @@ const defaultSettings: Settings = {
 
 function withFallback<T>(read: () => T | undefined, fallback: T) {
   return createMemo(() => read() ?? fallback)
+}
+
+function normalizeSessionContentWidth(value: number | undefined): number {
+  if (value === undefined) return sessionContentWidthDefault
+  return sessionContentWidthOptions.some((option) => option === value) ? value : sessionContentWidthDefault
 }
 
 export const { use: useSettings, provider: SettingsProvider } = createSimpleContext({
@@ -263,6 +272,10 @@ export const { use: useSettings, provider: SettingsProvider } = createSimpleCont
         fontSize: withFallback(() => store.appearance?.fontSize, defaultSettings.appearance.fontSize),
         setFontSize(value: number) {
           setStore("appearance", "fontSize", value)
+        },
+        sessionContentWidth: createMemo(() => normalizeSessionContentWidth(store.appearance?.sessionContentWidth)),
+        setSessionContentWidth(value: number) {
+          setStore("appearance", "sessionContentWidth", normalizeSessionContentWidth(value))
         },
         font: withFallback(() => store.appearance?.mono, defaultSettings.appearance.mono),
         setFont(value: string) {

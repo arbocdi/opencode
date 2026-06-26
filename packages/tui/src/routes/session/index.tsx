@@ -268,7 +268,10 @@ export function Session() {
     return false
   })
   const showTimestamps = createMemo(() => timestamps() === "show")
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+  const contentWidth = createMemo(() => {
+    const available = Math.max(1, dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+    return Math.min(available, tuiConfig.session?.max_width ?? available)
+  })
   const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
@@ -1163,9 +1166,19 @@ export function Session() {
         }}
       >
         <box flexDirection="row" flexGrow={1} minHeight={0}>
-          <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
+          <box
+            flexGrow={1}
+            minHeight={0}
+            paddingBottom={1}
+            paddingLeft={2}
+            paddingRight={2}
+            gap={1}
+            alignItems="center"
+          >
             <Show when={session()}>
               <scrollbox
+                width="100%"
+                maxWidth={contentWidth()}
                 ref={(r) => (scroll = r)}
                 viewportOptions={{
                   paddingRight: showScrollbar() ? 1 : 0,
@@ -1279,7 +1292,7 @@ export function Session() {
                   )}
                 </For>
               </scrollbox>
-              <box flexShrink={0}>
+              <box width="100%" maxWidth={contentWidth()} flexShrink={0}>
                 <Show when={permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
