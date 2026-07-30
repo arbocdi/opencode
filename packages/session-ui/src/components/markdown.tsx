@@ -25,6 +25,7 @@ import {
 import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol"
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 import { getCachedMarkdown, sanitizeMarkdown, touchCachedMarkdown, type MarkdownCacheEntry } from "./markdown-cache"
+import { isMermaidLanguage, mermaidErrorMessage, renderMermaid } from "./markdown-mermaid"
 
 type RenderedBlock =
   | (MarkdownCacheEntry & { key: string; mode: Exclude<Block["mode"], "code"> })
@@ -38,6 +39,24 @@ type RenderedBlock =
       generation: number
       stable: MarkdownToken[]
       unstable: MarkdownToken[]
+    }
+  | {
+      key: string
+      mode: "mermaid"
+      raw: string
+      hash: string
+      source: string
+      svg: string
+      error?: never
+    }
+  | {
+      key: string
+      mode: "mermaid"
+      raw: string
+      hash: string
+      source: string
+      svg?: never
+      error: string
     }
 
 type RenderResult = {
@@ -320,11 +339,25 @@ export function Markdown(
 
       const base = src.key ?? checksum(src.text)
       return Promise.all(
-        src.projection.blocks.map(async (block, index) => {
+        src.projection.blocks.map(async (block, index): Promise<RenderedBlock> => {
           const key = base ? `${base}:${index}:${block.mode}` : undefined
           const blockKey = markdownBlockKey(owner, src.key, index, block.mode)
 
           if (block.mode === "code") {
+            if (block.complete && isMermaidLanguage(block.language)) {
+              const hash = checksum(block.raw) ?? String(block.raw.length)
+              return renderMermaid(block.src).then(
+                (svg) => ({ key: blockKey, mode: "mermaid" as const, raw: block.raw, hash, source: block.src, svg }),
+                (error) => ({
+                  key: blockKey,
+                  mode: "mermaid" as const,
+                  raw: block.raw,
+                  hash,
+                  source: block.src,
+                  error: mermaidErrorMessage(error),
+                }),
+              )
+            }
             const cached = completedCode.get(blockKey)
             if (block.complete && cached?.raw === block.raw) return cached
             const result = await code(block.src, block.language, blockKey, block.complete)
@@ -442,7 +475,7 @@ function pendingBlocks(
   const initial = result.blocks.length === 1 && result.blocks[0]?.key === "initial"
   return projection.blocks.map((block, index) => {
     const current = initial ? undefined : result.blocks[index]
-    if (current && canReusePendingBlock(current, block)) return current
+    if (current && current.mode !== "mermaid" && canReusePendingBlock(current, block)) return current
     const key = markdownBlockKey(owner, cacheKey, index, block.mode)
     if (block.mode !== "code")
       return { key, mode: block.mode, raw: block.raw, hash: String(block.raw.length), html: fallback(block.src) }
@@ -466,12 +499,17 @@ function disposeCode(key: string) {
 
 function updateBlock(container: HTMLDivElement, index: number, block: RenderedBlock, labels: CopyLabels) {
   const current = container.children[index]
+  if (block.mode === "mermaid") {
+    updateMermaidBlock(container, current, block, labels)
+    return
+  }
   if (block.mode === "code") {
     updateCodeBlock(container, current, block, labels)
     return
   }
   if (
     current instanceof HTMLDivElement &&
+    current.getAttribute("data-component") === "markdown-mermaid" &&
     current.dataset.markdownKey === block.key &&
     current.dataset.markdownHash === block.hash
   )
@@ -506,13 +544,67 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
   })
 }
 
+function updateMermaidBlock(
+  container: HTMLDivElement,
+  current: Element | undefined,
+  block: Extract<RenderedBlock, { mode: "mermaid" }>,
+  labels: CopyLabels,
+) {
+  if (
+    current instanceof HTMLDivElement &&
+    current.dataset.markdownKey === block.key &&
+    current.dataset.markdownHash === block.hash
+  )
+    return
+
+  const next = document.createElement("div")
+  next.dataset.markdownBlock = ""
+  next.dataset.markdownKey = block.key
+  next.dataset.markdownHash = block.hash
+  next.setAttribute("data-component", "markdown-mermaid")
+
+  if (block.svg) {
+    const diagram = document.createElement("div")
+    diagram.setAttribute("data-slot", "markdown-mermaid-svg")
+    diagram.innerHTML = block.svg
+    next.appendChild(diagram)
+  }
+
+  if (block.error) {
+    next.setAttribute("data-error", "true")
+    const error = document.createElement("div")
+    error.setAttribute("data-slot", "markdown-mermaid-error")
+    error.textContent = `Mermaid rendering error: ${block.error}`
+    const wrapper = document.createElement("div")
+    wrapper.setAttribute("data-component", "markdown-code")
+    const pre = document.createElement("pre")
+    pre.className = "shiki OpenCode"
+    const codeElement = document.createElement("code")
+    codeElement.className = "language-mermaid"
+    codeElement.textContent = block.source
+    pre.appendChild(codeElement)
+    wrapper.appendChild(pre)
+    wrapper.appendChild(createCopyButton(labels))
+    next.appendChild(error)
+    next.appendChild(wrapper)
+  }
+
+  if (current) current.replaceWith(next)
+  else container.appendChild(next)
+}
+
 function updateCodeBlock(
   container: HTMLDivElement,
   current: Element | undefined,
   block: Extract<RenderedBlock, { mode: "code" }>,
   labels: CopyLabels,
 ) {
-  const existing = current instanceof HTMLDivElement && current.dataset.markdownKey === block.key ? current : undefined
+  const existing =
+    current instanceof HTMLDivElement &&
+    current.getAttribute("data-component") !== "markdown-mermaid" &&
+    current.dataset.markdownKey === block.key
+      ? current
+      : undefined
   const next = existing ?? document.createElement("div")
   next.dataset.markdownBlock = ""
   next.dataset.markdownKey = block.key

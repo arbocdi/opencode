@@ -139,6 +139,47 @@
     position: relative;
   }
 
+  [data-component="markdown-mermaid"] {
+    background: var(--color-background-stronger);
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    margin-top: 12px;
+    margin-bottom: 32px;
+    overflow: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-error="true"] {
+    border-color: var(--syntax-critical);
+  }
+
+  [data-slot="markdown-mermaid-svg"] {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    overflow: auto;
+    padding: 16px;
+  }
+
+  [data-slot="markdown-mermaid-svg"] svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  [data-slot="markdown-mermaid-error"] {
+    border-bottom: 0.5px solid color-mix(in srgb, var(--syntax-critical) 30%, transparent);
+    background: color-mix(in srgb, var(--syntax-critical) 10%, transparent);
+    color: var(--syntax-critical);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    padding: 8px 12px;
+  }
+
+  [data-component="markdown-mermaid"] pre {
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+  }
+
   [data-slot="markdown-copy-button"] {
     position: absolute;
     top: 4px;
