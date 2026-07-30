@@ -56,7 +56,12 @@ function embeddedUIResponse(file: string, body: Uint8Array) {
   const mime = FSUtil.mimeType(file)
   const headers = new Headers({ "content-type": mime })
   if (mime.startsWith("text/html")) {
+    headers.set("cache-control", "no-store")
     headers.set("content-security-policy", cspForHtml(new TextDecoder().decode(body)))
+  } else if (file.split(/[\\/]/).includes("assets")) {
+    headers.set("cache-control", "public, max-age=31536000, immutable")
+  } else {
+    headers.set("cache-control", "no-cache")
   }
   return HttpServerResponse.raw(body, { headers })
 }

@@ -372,6 +372,10 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
       })
       if (event.type === "server.connected" || event.type === "global.disposed") {
         if (recent) return
+        // SSE does not replay missed events, so reconnect must reconcile loaded timelines with durable state.
+        Object.keys(session.data.message).forEach((sessionID) => {
+          void session.sync(sessionID, { force: true }).catch((err) => console.error("Failed to refresh session", err))
+        })
         for (const directory of Object.keys(children.children)) {
           queue.push(directory)
         }
