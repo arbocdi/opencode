@@ -63,10 +63,13 @@ function createModel(opts: {
   input?: number
   cost?: Provider.Model["cost"]
   npm?: string
+  id?: string
+  providerID?: string
 }): Provider.Model {
+  const id = opts.id ?? "test-model"
   return {
-    id: "test-model",
-    providerID: "test",
+    id,
+    providerID: opts.providerID ?? "test",
     name: "Test",
     limit: {
       context: opts.context,
@@ -82,7 +85,7 @@ function createModel(opts: {
       input: { text: true, image: false, audio: false, video: false },
       output: { text: true, image: false, audio: false, video: false },
     },
-    api: { npm: opts.npm ?? "@ai-sdk/anthropic" },
+    api: { id, url: "", npm: opts.npm ?? "@ai-sdk/anthropic" },
     options: {},
   } as Provider.Model
 }
@@ -450,6 +453,58 @@ describe("session.compaction.isOverflow", () => {
         const model = createModel({ context: 200_000, input: 120_000, output: 10_000 })
         const tokens = { input: 50_000, output: 9_999, reasoning: 0, cache: { read: 0, write: 0 } }
         expect(yield* compact.isOverflow({ tokens, model })).toBe(false)
+      }),
+    ),
+  )
+
+  it.live(
+    "caps direct OpenAI GPT-5.6 usable context for subscription accounts",
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const compact = yield* SessionCompaction.Service
+        const model = createModel({
+          id: "gpt-5.6-sol",
+          providerID: "openai",
+          context: 1_050_000,
+          input: 922_000,
+          output: 128_000,
+          npm: "@ai-sdk/openai",
+        })
+        expect(
+          yield* compact.isOverflow({
+            model,
+            tokens: { input: 349_999, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          }),
+        ).toBe(false)
+        expect(
+          yield* compact.isOverflow({
+            model,
+            tokens: { input: 350_000, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          }),
+        ).toBe(true)
+      }),
+    ),
+  )
+
+  it.live(
+    "does not cap GPT-5.6 on custom OpenAI-compatible providers",
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const compact = yield* SessionCompaction.Service
+        const model = createModel({
+          id: "gpt-5.6-sol",
+          providerID: "requesty",
+          context: 1_050_000,
+          input: 922_000,
+          output: 128_000,
+          npm: "@ai-sdk/openai-compatible",
+        })
+        expect(
+          yield* compact.isOverflow({
+            model,
+            tokens: { input: 350_000, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          }),
+        ).toBe(false)
       }),
     ),
   )

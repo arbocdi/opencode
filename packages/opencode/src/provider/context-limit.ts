@@ -3,6 +3,7 @@ import type { Provider } from "./provider"
 import { ProviderTransform } from "./transform"
 
 const COMPACTION_BUFFER = 20_000
+const OPENAI_GPT56_SUBSCRIPTION_USABLE_CAP = 350_000
 
 export function usable(input: { cfg: ConfigV1.Info; model: Provider.Model; outputTokenMax?: number }): number {
   const context = input.model.limit.context
@@ -11,9 +12,15 @@ export function usable(input: { cfg: ConfigV1.Info; model: Provider.Model; outpu
   const reserved =
     input.cfg.compaction?.reserved ??
     Math.min(COMPACTION_BUFFER, ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
-  return input.model.limit.input
+  const calculated = input.model.limit.input
     ? Math.max(0, input.model.limit.input - reserved)
     : Math.max(0, context - ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
+  if (isOpenAIGPT56(input.model)) return Math.min(calculated, OPENAI_GPT56_SUBSCRIPTION_USABLE_CAP)
+  return calculated
+}
+
+function isOpenAIGPT56(model: Provider.Model) {
+  return model.providerID === "openai" && model.api.id?.startsWith("gpt-5.6")
 }
 
 export function withUsable(input: { cfg: ConfigV1.Info; provider: Provider.Info; outputTokenMax?: number }): Provider.Info {

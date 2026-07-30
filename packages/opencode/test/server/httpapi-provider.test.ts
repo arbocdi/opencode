@@ -311,6 +311,18 @@ describe("provider HttpApi", () => {
         output: 128_000,
         usable: 260_000,
       })
+      expect(modelLimit(providerBody, "all", "openai", "gpt-5.6-sol")).toMatchObject({
+        context: 1_050_000,
+        input: 922_000,
+        output: 128_000,
+        usable: 350_000,
+      })
+      expect(modelLimit(configBody, "providers", "openai", "gpt-5.6-sol")).toMatchObject({
+        context: 1_050_000,
+        input: 922_000,
+        output: 128_000,
+        usable: 350_000,
+      })
     }),
     {
       config: {
@@ -328,6 +340,18 @@ describe("provider HttpApi", () => {
               },
             },
             options: { apiKey: "custom-key" },
+          },
+          openai: {
+            name: "OpenAI",
+            npm: "@ai-sdk/openai",
+            api: "https://api.openai.com/v1",
+            models: {
+              "gpt-5.6-sol": {
+                name: "GPT-5.6 Sol",
+                limit: { context: 1_050_000, input: 922_000, output: 128_000 },
+              },
+            },
+            options: { apiKey: "openai-key" },
           },
         },
       },
