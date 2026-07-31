@@ -1,9 +1,11 @@
 import { NodeHttpServer } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
-import { Context, Effect, Layer, Option } from "effect"
-import { HttpBody, HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
+import { Context, Effect, Layer, Option, Queue, Schema, Stream } from "effect"
+import { HttpBody, HttpClient, HttpClientRequest, HttpClientResponse, HttpRouter } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
+import * as Sse from "effect/unstable/encoding/Sse"
 import { Auth } from "../../src/auth"
+import { GlobalBus } from "../../src/bus/global"
 import { Config } from "../../src/config/config"
 import { Installation } from "../../src/installation"
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
@@ -42,6 +44,41 @@ const apiLayer = HttpRouter.serve(
 )
 const it = testEffect(apiLayer)
 
+const GlobalEventData = Schema.Struct({
+  directory: Schema.optional(Schema.String),
+  payload: Schema.Struct({
+    id: Schema.optional(Schema.String),
+    type: Schema.String,
+    properties: Schema.Record(Schema.String, Schema.Any),
+  }),
+})
+type GlobalEventData = Schema.Schema.Type<typeof GlobalEventData>
+
+const readEvent = (reader: Queue.Dequeue<GlobalEventData>) =>
+  Queue.take(reader).pipe(
+    Effect.timeoutOrElse({
+      duration: "5 seconds",
+      orElse: () => Effect.fail(new Error("timed out waiting for global event")),
+    }),
+  )
+
+const consume = (response: HttpClientResponse.HttpClientResponse) =>
+  Effect.gen(function* () {
+    const reader = yield* Queue.unbounded<GlobalEventData>()
+    yield* response.stream.pipe(
+      Stream.decodeText(),
+      Stream.pipeThroughChannel(Sse.decodeDataSchema(GlobalEventData)),
+      Stream.runForEach((event) => Queue.offer(reader, event.data)),
+      Effect.forkScoped,
+    )
+    return reader
+  })
+
+const openEventStream = Effect.gen(function* () {
+  const response = yield* HttpClient.get(GlobalPaths.event)
+  return { response, reader: yield* consume(response) }
+})
+
 describe("global HttpApi", () => {
   it.live("upgrades to latest when the request body is omitted", () =>
     Effect.gen(function* () {
@@ -61,6 +98,46 @@ describe("global HttpApi", () => {
 
       expect(response.status).toBe(400)
       expect(yield* response.json).toEqual({ success: false, error: "Invalid request body" })
+    }),
+  )
+
+  it.live("broadcasts events to simultaneous subscribers", () =>
+    Effect.gen(function* () {
+      const first = yield* openEventStream
+      const second = yield* openEventStream
+      expect(yield* readEvent(first.reader)).toMatchObject({ payload: { type: "server.connected" } })
+      expect(yield* readEvent(second.reader)).toMatchObject({ payload: { type: "server.connected" } })
+
+      GlobalBus.emit("event", {
+        directory: "/repo",
+        payload: { type: "test.event", properties: { value: "broadcast" } },
+      })
+
+      expect(yield* readEvent(first.reader)).toMatchObject({
+        directory: "/repo",
+        payload: { type: "test.event", properties: { value: "broadcast" } },
+      })
+      expect(yield* readEvent(second.reader)).toMatchObject({
+        directory: "/repo",
+        payload: { type: "test.event", properties: { value: "broadcast" } },
+      })
+    }),
+  )
+
+  it.live("subscribes before the response body starts", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get(GlobalPaths.event)
+      GlobalBus.emit("event", {
+        directory: "/repo",
+        payload: { type: "test.event", properties: { value: "queued" } },
+      })
+      const reader = yield* consume(response)
+
+      expect(yield* readEvent(reader)).toMatchObject({ payload: { type: "server.connected" } })
+      expect(yield* readEvent(reader)).toMatchObject({
+        directory: "/repo",
+        payload: { type: "test.event", properties: { value: "queued" } },
+      })
     }),
   )
 })

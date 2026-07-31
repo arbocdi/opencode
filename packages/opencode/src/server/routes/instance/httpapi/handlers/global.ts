@@ -33,13 +33,15 @@ function parseBody(body: string) {
 function eventResponse() {
   return Effect.gen(function* () {
     yield* Effect.logInfo("global event connected")
-    const events = Stream.callback<GlobalBusEvent>((queue) => {
-      const handler = (event: GlobalBusEvent) => Queue.offerUnsafe(queue, event)
-      return Effect.acquireRelease(
-        Effect.sync(() => GlobalBus.on("event", handler)),
-        () => Effect.sync(() => GlobalBus.off("event", handler)),
-      )
-    })
+    // Register eagerly so events cannot be lost while the response body starts
+    // or emits server.connected.
+    const queue = yield* Queue.unbounded<GlobalBusEvent>()
+    const handler = (event: GlobalBusEvent) => Queue.offerUnsafe(queue, event)
+    yield* Effect.acquireRelease(
+      Effect.sync(() => void GlobalBus.on("event", handler)),
+      () => Effect.sync(() => void GlobalBus.off("event", handler)),
+    )
+    const events = Stream.fromQueue(queue)
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
       Stream.map(() => ({ payload: { id: EventV2.ID.create(), type: "server.heartbeat", properties: {} } })),
