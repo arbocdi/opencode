@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { coalesceServerEvents, resumeStreamAfterPageShow } from "./server-sdk"
+import {
+  coalesceServerEvents,
+  createServerEventTaskQueue,
+  resumeStreamAfterPageShow,
+  serverEventTimersAllowed,
+} from "./server-sdk"
 import type { Event } from "@opencode-ai/sdk/v2/client"
 
 describe("resumeStreamAfterPageShow", () => {
@@ -11,6 +16,26 @@ describe("resumeStreamAfterPageShow", () => {
     resumeStreamAfterPageShow({ persisted: true } as PageTransitionEvent, start)
 
     expect(starts).toBe(1)
+  })
+})
+
+describe("serverEventTimersAllowed", () => {
+  test("avoids throttled timers when the document is hidden", () => {
+    expect(serverEventTimersAllowed("visible")).toBe(true)
+    expect(serverEventTimersAllowed("hidden")).toBe(false)
+  })
+
+  test("runs background stream work through a task queue", async () => {
+    const tasks = createServerEventTaskQueue()
+    let scheduled = false
+    tasks.schedule(() => {
+      scheduled = true
+    })
+
+    expect(scheduled).toBe(false)
+    await tasks.yield()
+    expect(scheduled).toBe(true)
+    tasks.dispose()
   })
 })
 

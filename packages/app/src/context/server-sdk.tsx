@@ -54,6 +54,36 @@ export function resumeStreamAfterPageShow(event: PageTransitionEvent, start: () 
   start()
 }
 
+export function serverEventTimersAllowed(visibilityState: DocumentVisibilityState) {
+  return visibilityState === "visible"
+}
+
+export function createServerEventTaskQueue(channel = new MessageChannel()) {
+  const tasks: Array<() => void> = []
+  let disposed = false
+  channel.port1.onmessage = () => tasks.shift()?.()
+
+  const schedule = (task: () => void) => {
+    if (disposed) {
+      task()
+      return
+    }
+    tasks.push(task)
+    channel.port2.postMessage(undefined)
+  }
+
+  return {
+    schedule,
+    yield: () => new Promise<void>((resolve) => schedule(resolve)),
+    dispose() {
+      disposed = true
+      channel.port1.close()
+      channel.port2.close()
+      tasks.splice(0).forEach((task) => task())
+    },
+  }
+}
+
 function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerScope) {
   const platform = usePlatform()
   const abort = new AbortController()
@@ -88,7 +118,9 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   const coalesced = new Map<string, number>()
   const staleDeltas = new Set<string>()
   let timer: ReturnType<typeof setTimeout> | undefined
+  let taskPending = false
   let last = 0
+  const taskQueue = createServerEventTaskQueue()
 
   const key = (directory: string, payload: Event) => {
     if (payload.type === "session.status") return `session.status:${directory}:${payload.properties.sessionID}`
@@ -102,6 +134,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   const flush = () => {
     if (timer) clearTimeout(timer)
     timer = undefined
+    taskPending = false
 
     if (queue.length === 0) return
 
@@ -123,9 +156,17 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   }
 
   const schedule = () => {
-    if (timer) return
+    if (timer || taskPending) return
     const elapsed = Date.now() - last
-    timer = setTimeout(flush, Math.max(0, FLUSH_FRAME_MS - elapsed))
+    if (serverEventTimersAllowed(document.visibilityState)) {
+      timer = setTimeout(flush, Math.max(0, FLUSH_FRAME_MS - elapsed))
+      return
+    }
+    taskPending = true
+    taskQueue.schedule(() => {
+      if (!taskPending) return
+      flush()
+    })
   }
 
   let streamErrorLogged = false
@@ -209,7 +250,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
 
             if (Date.now() - yielded < STREAM_YIELD_MS) continue
             yielded = Date.now()
-            await wait(0)
+            await taskQueue.yield()
           }
         } catch (error) {
           if (!isStreamClosed(error, attempt?.signal) && !streamErrorLogged) {
@@ -249,7 +290,13 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     makeEventListener(window, "pagehide", stop)
     makeEventListener(window, "pageshow", (event) => resumeStreamAfterPageShow(event, start))
     makeEventListener(document, "visibilitychange", () => {
-      if (document.visibilityState !== "visible") return
+      if (!serverEventTimersAllowed(document.visibilityState)) {
+        if (timer) clearTimeout(timer)
+        timer = undefined
+        if (queue.length > 0) schedule()
+        return
+      }
+      flush()
       if (!started) return
       if (Date.now() - lastEventAt < HEARTBEAT_TIMEOUT_MS) return
       attempt?.abort()
@@ -260,6 +307,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     stop()
     abort.abort()
     flush()
+    taskQueue.dispose()
   })
 
   const sdk = createSdkForServer({
