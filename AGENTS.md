@@ -155,6 +155,20 @@ const table = sqliteTable("session", {
 
 - Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.
 
+## Resource-Constrained Verification
+
+The development VM has limited memory, and parallel Turbo, tsgo, Bun, and Playwright processes can trigger a system OOM.
+
+- Never run multiple build, typecheck, or test jobs concurrently, including across subagents.
+- Use `bun turbo typecheck --concurrency=2` for a full-repository typecheck. Prefer package-local `bun typecheck` during normal iteration.
+- Use `bun turbo build --concurrency=2` for a full Turbo build.
+- Use `bun turbo test --concurrency=2` for Turbo tests.
+- Limit package-wide Bun test runs with `--max-concurrency=4`.
+- Run local Playwright tests with `PLAYWRIGHT_WORKERS=1`.
+- Do not bypass the pre-push typecheck with `git push --no-verify`.
+- A subagent isolates model context, not system memory. Run at most one memory-intensive verification subagent at a time.
+- Do not run a full build, test, or typecheck solely for diagnosis when static inspection or a focused package command is sufficient.
+
 ## V2 Session Core
 
 - Keep durable prompt admission separate from model execution. `SessionV2.prompt(...)` admits one durable `session_input` row before scheduling advisory `SessionExecution.wake(sessionID)` unless `resume: false` requests admit-only behavior. The serialized runner promotes admitted inputs into visible user messages at safe boundaries.
