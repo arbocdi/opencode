@@ -35,6 +35,7 @@ import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { Effect, Schema } from "effect"
+import { ToolResultContextProjector } from "./tool-result-context"
 
 export const node = LayerNode.group([Database.node])
 
@@ -293,7 +294,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           toolNames.add(part.tool)
           if (part.state.status === "completed") {
             const outputText = part.state.time.compacted
-              ? "[Old tool result content cleared]"
+              ? ToolResultContextProjector.project(part)
               : truncateToolOutput(part.state.output, options?.toolOutputMaxChars)
             const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
 

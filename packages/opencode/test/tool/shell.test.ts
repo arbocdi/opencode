@@ -1029,6 +1029,7 @@ describe("tool.shell abort", () => {
           )
           expect(res.output).toContain("before")
           expect(res.output).toContain("User aborted the command")
+          expect(res.metadata.termination).toBe("abort")
           expect(collected.length).toBeGreaterThan(0)
         }),
       ),
@@ -1047,6 +1048,7 @@ describe("tool.shell abort", () => {
           })
           expect(result.output).toContain("shell tool terminated command after exceeding timeout")
           expect(result.output).toContain("retry with a larger timeout value in milliseconds")
+          expect(result.metadata.termination).toBe("timeout")
         }),
       ),
     15_000,
@@ -1096,6 +1098,7 @@ describe("tool.shell abort", () => {
           command: `exit 42`,
         })
         expect(result.metadata.exit).toBe(42)
+        expect(result.metadata.termination).toBe("exit")
       }),
     ),
   )

@@ -16,6 +16,8 @@ import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
+import { ToolOutputTool } from "./output"
+import { ToolOutputRepository } from "./output-repository"
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
@@ -105,6 +107,7 @@ export const layer = Layer.effect(
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
+    const outputtool = yield* ToolOutputTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -208,6 +211,7 @@ export const layer = Layer.effect(
           todo: Tool.init(todo),
           search: Tool.init(websearch),
           skill: Tool.init(skilltool),
+          output: Tool.init(outputtool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
@@ -230,6 +234,7 @@ export const layer = Layer.effect(
             tool.todo,
             tool.search,
             tool.skill,
+            tool.output,
             tool.patch,
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
@@ -313,7 +318,7 @@ export const layer = Layer.effect(
 
     return Service.of({ ids, all, named, tools })
   }),
-)
+).pipe(Layer.provide(ToolOutputRepository.layer))
 
 export const defaultLayer = Layer.suspend(() =>
   layer

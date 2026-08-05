@@ -587,6 +587,7 @@ export const ShellTool = Tool.define(
         metadata: {
           output: last || preview(output),
           exit: code,
+          termination: expired ? "timeout" : aborted ? "abort" : "exit",
           truncated: cut,
           ...(cut && file ? { outputPath: file } : {}),
         },

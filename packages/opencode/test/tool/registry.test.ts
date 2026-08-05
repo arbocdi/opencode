@@ -66,6 +66,14 @@ afterEach(async () => {
 })
 
 describe("tool.registry", () => {
+  it.instance("exposes historical tool output retrieval", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+
+      expect(yield* registry.ids()).toContain("tool_output")
+    }),
+  )
+
   it.instance("does not expose task_status", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service

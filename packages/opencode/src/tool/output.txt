@@ -1,0 +1,5 @@
+Retrieves historical output for a bash tool call in the current session.
+
+Use this only with a callID shown by a compacted bash result. The tool checks that the call belongs to the current session and never accepts a filesystem path from the model.
+
+Without pattern, offset and limit select source lines. With pattern, they select lines containing that case-sensitive literal substring. Results include original source line numbers. A large truncated bash result can be retrieved only while its managed artifact still exists; artifacts expire after retention, in which case this tool returns the incomplete preview retained in SQLite.
